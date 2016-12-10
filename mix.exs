@@ -16,9 +16,10 @@ defmodule Phoenix.PubSub.RabbitMQ.Mixfile do
     [applications: [:logger, :amqp, :poolboy]]
   end
 
-  defp deps do
-    [{:poolboy, "~> 1.4.2"},
-     {:amqp, "~> 0.1.0"}]
+  defp deps do     
+    [{:poolboy, "~> 1.5"},
+     {:amqp_client, git: "https://github.com/mendrugory/amqp_client.git", branch: "erlang_otp_19", override: true},
+     {:amqp, "~> 0.1.5"}]
   end
 
   defp description do
