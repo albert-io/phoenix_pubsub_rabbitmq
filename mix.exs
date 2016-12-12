@@ -13,13 +13,13 @@ defmodule Phoenix.PubSub.RabbitMQ.Mixfile do
   end
 
   def application do
-    [applications: [:logger, :amqp, :poolboy]]
+    [applications: [:logger, :amqp, :poolboy, :phoenix_pubsub]]
   end
 
-  defp deps do     
-    [{:poolboy, "~> 1.5"},
-     {:amqp_client, git: "https://github.com/mendrugory/amqp_client.git", branch: "erlang_otp_19", override: true},
-     {:amqp, "~> 0.1.5"}]
+  defp deps do
+    [{:phoenix_pubsub, "~> 1.0"},
+     {:poolboy, ">= 1.4.2"},
+     {:amqp, git: "https://github.com/mtokioka/amqp.git"}]
   end
 
   defp description do
