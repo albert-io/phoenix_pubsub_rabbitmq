@@ -36,9 +36,9 @@ defmodule Phoenix.PubSub.RabbitMQServer do
     GenServer.call(pool_name, {:subscribe, pid, topic, opts})
   end
   def unsubscribe(pool_name, pid, topic) do
-    GenServer.call(pool_name, {:subscribe, pid, topic})
+    GenServer.call(pool_name, {:unsubscribe, pid, topic})
   end
-  def broadcast(pool_name,from_pid, topic, msg) do
+  def broadcast(pool_name, from_pid, topic, msg) do
     GenServer.call(pool_name, {:broadcast, from_pid, topic, msg})
   end
 

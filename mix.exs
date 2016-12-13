@@ -19,7 +19,9 @@ defmodule Phoenix.PubSub.RabbitMQ.Mixfile do
   defp deps do
     [{:phoenix_pubsub, "~> 1.0"},
      {:poolboy, ">= 1.4.2"},
-     {:amqp, git: "https://github.com/mtokioka/amqp.git"}]
+     {:amqp, "~> 0.1.5"},
+     {:amqp_client, github: "jbrisbin/amqp_client", override: true},
+     {:rabbit_common, github: "jbrisbin/rabbit_common", override: true}]
   end
 
   defp description do

@@ -55,7 +55,7 @@ defmodule PhoenixRabbitmqPubsubTest do
   end
 
   def rand_server_name do
-    :crypto.rand_bytes(16) |> Base.encode16 |> String.to_atom
+    :crypto.strong_rand_bytes(16) |> Base.encode16 |> String.to_atom
   end
 
   defmodule FailedBroadcaster do

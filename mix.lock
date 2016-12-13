@@ -1,5 +1,5 @@
-%{"amqp": {:git, "https://github.com/mtokioka/amqp.git", "e160b6321782b14954a025a436ecd5c0af0fe9ea", []},
+%{"amqp": {:hex, :amqp, "0.1.5", "f38e30abfce06fd2213f5e24744a2923f9d3c30f1687db19952be547457e0e7b", [:mix], [{:amqp_client, "3.5.6", [hex: :amqp_client, optional: false]}]},
   "amqp_client": {:git, "https://github.com/jbrisbin/amqp_client.git", "d50aec00b94f0766a048b4eceaf25ddfdeeb1d86", []},
   "phoenix_pubsub": {:hex, :phoenix_pubsub, "1.0.1", "c10ddf6237007c804bf2b8f3c4d5b99009b42eca3a0dfac04ea2d8001186056a", [:mix], []},
   "poolboy": {:hex, :poolboy, "1.5.1", "6b46163901cfd0a1b43d692657ed9d7e599853b3b21b95ae5ae0a777cf9b6ca8", [:rebar], []},
-  "rabbit_common": {:git, "https://github.com/jbrisbin/rabbit_common.git", "eea16abd375981d16595d2cefaac893c7281187b", [ref: ""]}}
+  "rabbit_common": {:git, "https://github.com/jbrisbin/rabbit_common.git", "80814606ae23cc820c74e443383e192cd69ec030", []}}
