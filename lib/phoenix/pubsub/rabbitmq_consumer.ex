@@ -22,11 +22,10 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
     case RabbitMQ.with_conn(conn_pool, fn conn ->
           {:ok, chan} = Channel.open(conn)
           Process.monitor(chan.pid)
-
-          {:ok, %{queue: queue}} = Queue.declare(chan, "", auto_delete: true)
-          :ok = Exchange.declare(chan, exchange, :direct, auto_delete: true)
+          queue_name = Process.info(pid)[:registered_name]
+          {:ok, %{queue: queue}} = Queue.declare(chan, inspect(queue_name), auto_delete: false, durable: true)
+          :ok = Exchange.declare(chan, exchange, :direct, auto_delete: false)
           :ok = Queue.bind(chan, queue, exchange, routing_key: topic)
-
           _pid_monitor = Process.monitor(pid)
           :ok = Basic.qos(chan, prefetch_count: @prefetch_count)
           {:ok, consumer_tag} = Basic.consume(chan, queue, self(), exclusive: true)
