@@ -45,23 +45,26 @@ defmodule Phoenix.PubSub.RabbitMQServer do
   def handle_call({:subscribe, pid, topic, opts}, _from, state) do
     link = Keyword.get(opts, :link, false)
 
-    has_key = case Dict.get(state.subs, topic) do
-                {pids, size} when size > 0 -> Dict.has_key?(pids, pid)
-                _                          -> false
-              end
+    has_key =
+      case Dict.get(state.subs, topic) do
+        {pids, size} when size > 0 -> Dict.has_key?(pids, pid)
+        _                          -> false
+      end
 
     unless has_key do
       {:ok, consumer_pid} = Consumer.start(state.conn_pool_name,
-                                           state.exchange, topic,
-                                           pid,
-                                           state.node_ref,
-                                           link)
+        state.exchange, topic,
+        pid,
+        state.node_ref,
+        link,
+        opts
+      )
       Process.monitor(consumer_pid)
 
       if link, do: Process.link(pid)
 
       {:reply, :ok, %{state | subs: add_subscriber(state.subs, pid, topic, consumer_pid),
-                              cons: Dict.put(state.cons, consumer_pid, {topic, pid})}}
+                      cons: Dict.put(state.cons, consumer_pid, {topic, pid})}}
     end
   end
 
@@ -93,10 +96,10 @@ defmodule Phoenix.PubSub.RabbitMQServer do
 
   def handle_call({:broadcast, from_pid, topic, msg}, _from, state) do
     case RabbitMQ.publish(state.pub_pool_name,
-                          state.exchange,
-                          topic,
-                          :erlang.term_to_binary({state.node_ref, from_pid, msg}),
-                          content_type: "application/x-erlang-binary") do
+          state.exchange,
+          topic,
+          :erlang.term_to_binary({state.node_ref, from_pid, msg}),
+          content_type: "application/x-erlang-binary") do
       :ok              -> {:reply, :ok, state}
       {:error, reason} -> {:reply, {:error, reason}, state}
     end
@@ -107,7 +110,7 @@ defmodule Phoenix.PubSub.RabbitMQServer do
       case Dict.fetch(state.cons, pid) do
         {:ok, {topic, sub_pid}} ->
           %{state | cons: Dict.delete(state.cons, pid),
-                    subs: delete_subscriber(state.subs, sub_pid, topic)}
+            subs: delete_subscriber(state.subs, sub_pid, topic)}
         :error ->
           state
       end

@@ -6,25 +6,27 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
 
   @prefetch_count 10
 
-  def start_link(conn_pool, exchange, topic, pid, node_ref, link) do
-    GenServer.start_link(__MODULE__, [conn_pool, exchange, topic, pid, node_ref, link])
+  def start_link(conn_pool, exchange, topic, pid, node_ref, link, opts \\ []) do
+    GenServer.start_link(__MODULE__, [conn_pool, exchange, topic, pid, node_ref, link, opts])
   end
 
-  def start(conn_pool, exchange, topic, pid, node_ref, link) do
-    GenServer.start(__MODULE__, [conn_pool, exchange, topic, pid, node_ref, link])
+  def start(conn_pool, exchange, topic, pid, node_ref, link, opts \\ []) do
+    GenServer.start(__MODULE__, [conn_pool, exchange, topic, pid, node_ref, link, opts])
   end
 
-  def init([conn_pool, exchange, topic, pid, node_ref, link]) do
+  def init([conn_pool, exchange, topic, pid, node_ref, link, opts]) do
     Process.flag(:trap_exit, true)
 
     if link, do: Process.link(pid)
 
+    durable_queues? = Keyword.get(opts, :durable_queues?, false)
+    auto_delete_queues? = Keyword.get(opts, :auto_delete_queues?, true)
     case RabbitMQ.with_conn(conn_pool, fn conn ->
           {:ok, chan} = Channel.open(conn)
           Process.monitor(chan.pid)
           queue_name = Process.info(pid)[:registered_name]
-          {:ok, %{queue: queue}} = Queue.declare(chan, inspect(queue_name), auto_delete: false, durable: true)
-          :ok = Exchange.declare(chan, exchange, :direct, auto_delete: false)
+          {:ok, %{queue: queue}} = Queue.declare(chan, inspect(queue_name), auto_delete: auto_delete_queues?, durable: durable_queues?)
+          :ok = Exchange.declare(chan, exchange, :direct, auto_delete: auto_delete_queues?)
           :ok = Queue.bind(chan, queue, exchange, routing_key: topic)
           _pid_monitor = Process.monitor(pid)
           :ok = Basic.qos(chan, prefetch_count: @prefetch_count)
@@ -63,9 +65,15 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
   def handle_info({:basic_deliver, payload, %{delivery_tag: delivery_tag}}, state) do
     {remote_node_ref, from_pid, msg} = :erlang.binary_to_term(payload)
     if from_pid == :none or remote_node_ref != state.node_ref and from_pid != state.pid do
-      send(state.pid, msg)
+      case GenServer.call(state.pid, msg) do
+        {:ok, _} ->
+          Basic.ack(state.chan, delivery_tag)
+        {:error, reason} ->
+          Basic.nack(state.chan, delivery_tag, requeue: false)
+      end
+    else
+      Basic.ack(state.chan, delivery_tag)
     end
-    Basic.ack(state.chan, delivery_tag)
     {:noreply, state}
   end
 
