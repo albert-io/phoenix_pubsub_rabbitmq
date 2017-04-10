@@ -21,6 +21,7 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
 
     durable_queues? = Keyword.get(opts, :durable_queues?, false)
     auto_delete_queues? = Keyword.get(opts, :auto_delete_queues?, true)
+    deliver_with_genserver_call? = Keyword.get(opts, :deliver_with_genserver_call?, false)
     case RabbitMQ.with_conn(conn_pool, fn conn ->
           {:ok, chan} = Channel.open(conn)
           Process.monitor(chan.pid)
@@ -34,7 +35,7 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
           {:ok, chan, consumer_tag}
         end) do
       {:ok, chan, consumer_tag} ->
-        {:ok, %{chan: chan, pid: pid, node_ref: node_ref, consumer_tag: consumer_tag}}
+        {:ok, %{chan: chan, pid: pid, node_ref: node_ref, consumer_tag: consumer_tag, deliver_with_genserver_call?: deliver_with_genserver_call?}}
       {:error, :disconnected} ->
         {:stop, :disconnected}
     end
@@ -62,7 +63,7 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
     {:stop, {:shutdown, :basic_cancel}, state}
   end
 
-  def handle_info({:basic_deliver, payload, %{delivery_tag: delivery_tag}}, state) do
+  def handle_info({:basic_deliver, payload, %{delivery_tag: delivery_tag}}, state = %{ deliver_with_genserver_call?: true}) do
     {remote_node_ref, from_pid, msg} = :erlang.binary_to_term(payload)
     if from_pid == :none or remote_node_ref != state.node_ref and from_pid != state.pid do
       case GenServer.call(state.pid, msg) do
@@ -74,6 +75,15 @@ defmodule Phoenix.PubSub.RabbitMQConsumer do
     else
       Basic.ack(state.chan, delivery_tag)
     end
+    {:noreply, state}
+  end
+
+  def handle_info({:basic_deliver, payload, %{delivery_tag: delivery_tag}}, state = %{ deliver_with_genserver_call?: false}) do
+    {remote_node_ref, from_pid, msg} = :erlang.binary_to_term(payload)
+    if from_pid == :none or remote_node_ref != state.node_ref and from_pid != state.pid do
+      send(state.pid, msg)
+    end
+    Basic.ack(state.chan, delivery_tag)
     {:noreply, state}
   end
 
